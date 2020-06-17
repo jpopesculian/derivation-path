@@ -229,12 +229,34 @@ impl ChildIndex {
         }
     }
 
-    /// Convert [ChildIndex] to a [u32]
+    /// Convert [ChildIndex] to its inner [u32]
     #[inline]
     pub fn to_u32(self) -> u32 {
         match self {
             ChildIndex::Hardened(index) => index,
             ChildIndex::Normal(index) => index,
+        }
+    }
+
+    /// Convert [ChildIndex] to a [u32] representing the type and a 31 bit number. The highest bit
+    /// is set for a hard derivation and clear for a normal derivation, and the remaining 31 bits are
+    /// the index
+    #[inline]
+    pub fn to_bits(self) -> u32 {
+        match self {
+            ChildIndex::Hardened(index) => (1 << 31) | index,
+            ChildIndex::Normal(index) => index,
+        }
+    }
+
+    /// Build a [ChildIndex] from a [u32] representing the type and a 31 bit number.
+    /// See [ChildIndex::to_bits] for more information
+    #[inline]
+    pub fn from_bits(bits: u32) -> Self {
+        if bits & (1 << 31) == 0 {
+            ChildIndex::Normal(bits)
+        } else {
+            ChildIndex::Hardened(bits & !(1 << 31))
         }
     }
 
@@ -340,6 +362,35 @@ mod test {
         assert_eq!(ChildIndex::Normal(100).to_u32(), 100);
         assert_eq!(ChildIndex::Hardened(0).to_u32(), 0);
         assert_eq!(ChildIndex::Hardened(1).to_u32(), 1);
+    }
+
+    #[test]
+    fn child_index_to_bits() {
+        assert_eq!(ChildIndex::Normal(0).to_bits(), 0);
+        assert_eq!(ChildIndex::Normal(1).to_bits(), 1);
+        assert_eq!(ChildIndex::Normal(100).to_bits(), 100);
+        assert_eq!(ChildIndex::Hardened(0).to_bits(), (1 << 31) | 0);
+        assert_eq!(ChildIndex::Hardened(1).to_bits(), (1 << 31) | 1);
+        assert_eq!(ChildIndex::Hardened(100).to_bits(), (1 << 31) | 100);
+    }
+
+    #[test]
+    fn child_index_from_bits() {
+        assert_eq!(ChildIndex::from_bits(0), ChildIndex::Normal(0));
+        assert_eq!(ChildIndex::from_bits(1), ChildIndex::Normal(1));
+        assert_eq!(ChildIndex::from_bits(100), ChildIndex::Normal(100));
+        assert_eq!(
+            ChildIndex::from_bits((1 << 31) | 0),
+            ChildIndex::Hardened(0)
+        );
+        assert_eq!(
+            ChildIndex::from_bits((1 << 31) | 1),
+            ChildIndex::Hardened(1)
+        );
+        assert_eq!(
+            ChildIndex::from_bits((1 << 31) | 100),
+            ChildIndex::Hardened(100)
+        );
     }
 
     #[test]
