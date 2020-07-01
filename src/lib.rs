@@ -24,6 +24,8 @@ extern crate alloc;
 use alloc::{borrow::ToOwned, boxed::Box, string::String};
 
 use core::fmt;
+use core::iter::IntoIterator;
+use core::slice::Iter;
 use core::str::FromStr;
 use failure::Fail;
 
@@ -188,6 +190,14 @@ impl FromStr for DerivationPath {
 impl AsRef<[ChildIndex]> for DerivationPath {
     fn as_ref(&self) -> &[ChildIndex] {
         self.path()
+    }
+}
+
+impl<'a> IntoIterator for &'a DerivationPath {
+    type IntoIter = Iter<'a, ChildIndex>;
+    type Item = &'a ChildIndex;
+    fn into_iter(self) -> Self::IntoIter {
+        self.path().iter()
     }
 }
 
