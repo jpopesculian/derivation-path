@@ -185,6 +185,12 @@ impl FromStr for DerivationPath {
     }
 }
 
+impl AsRef<[ChildIndex]> for DerivationPath {
+    fn as_ref(&self) -> &[ChildIndex] {
+        self.path()
+    }
+}
+
 /// An index in a [DerivationPath]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum ChildIndex {
