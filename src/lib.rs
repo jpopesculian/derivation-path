@@ -27,26 +27,63 @@ use core::fmt;
 use core::iter::IntoIterator;
 use core::slice::Iter;
 use core::str::FromStr;
-use failure::Fail;
 
 /// Errors when building a [DerivationPath]
-#[derive(Fail, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub enum DerivationPathError {
-    #[fail(display = "path too long")]
     PathTooLong,
-    #[fail(display = "invalid child index: {}", _0)]
     InvalidChildIndex(ChildIndexError),
 }
 
+impl fmt::Display for DerivationPathError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::PathTooLong => f.write_str("path too long"),
+            Self::InvalidChildIndex(err) => {
+                f.write_fmt(format_args!("invalid child index: {}", err))
+            }
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for DerivationPathError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::InvalidChildIndex(err) => Some(err),
+            Self::PathTooLong => None,
+        }
+    }
+}
+
 /// Errors when parsing a [DerivationPath] from a [str]
-#[derive(Fail, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub enum DerivationPathParseError {
-    #[fail(display = "empty")]
     Empty,
-    #[fail(display = "invalid prefix: {}", _0)]
     InvalidPrefix(String),
-    #[fail(display = "invalid child index: {}", _0)]
     InvalidChildIndex(ChildIndexParseError),
+}
+
+impl fmt::Display for DerivationPathParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Empty => f.write_str("empty"),
+            Self::InvalidPrefix(prefix) => f.write_fmt(format_args!("invalid prefix: {}", prefix)),
+            Self::InvalidChildIndex(err) => {
+                f.write_fmt(format_args!("invalid child index: {}", err))
+            }
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for DerivationPathParseError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::InvalidChildIndex(err) => Some(err),
+            Self::Empty | Self::InvalidPrefix(_) => None,
+        }
+    }
 }
 
 /// A list of [ChildIndex] items
@@ -209,20 +246,49 @@ pub enum ChildIndex {
 }
 
 /// Errors when parsing a [ChildIndex] from a [str]
-#[derive(Fail, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub enum ChildIndexParseError {
-    #[fail(display = "could not parse child index: {}", _0)]
     ParseIntError(core::num::ParseIntError),
-    #[fail(display = "invalid child index: {}", _0)]
     ChildIndexError(ChildIndexError),
 }
 
+impl fmt::Display for ChildIndexParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::ParseIntError(err) => {
+                f.write_fmt(format_args!("could not parse child index: {}", err))
+            }
+            Self::ChildIndexError(err) => f.write_fmt(format_args!("invalid child index: {}", err)),
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for ChildIndexParseError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::ParseIntError(err) => Some(err),
+            Self::ChildIndexError(err) => Some(err),
+        }
+    }
+}
+
 /// Errors when building a [ChildIndex]
-#[derive(Fail, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub enum ChildIndexError {
-    #[fail(display = "number too large: {}", _0)]
     NumberTooLarge(u32),
 }
+
+impl fmt::Display for ChildIndexError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::NumberTooLarge(num) => f.write_fmt(format_args!("number too large: {}", num)),
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for ChildIndexError {}
 
 impl ChildIndex {
     /// Create a [ChildIndex::Hardened] instance from a [u32]. This will fail if `num` is not
@@ -279,19 +345,13 @@ impl ChildIndex {
     /// Check if the [ChildIndex] is "hardened"
     #[inline]
     pub fn is_hardened(self) -> bool {
-        match self {
-            Self::Hardened(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Hardened(_))
     }
 
     /// Check if the [ChildIndex] is "normal"
     #[inline]
     pub fn is_normal(self) -> bool {
-        match self {
-            Self::Normal(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Normal(_))
     }
 }
 
